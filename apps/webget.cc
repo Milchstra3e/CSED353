@@ -26,7 +26,8 @@ void get_URL(const string &host, const string &path) {
     sock.write("Connection: close\r\n");
     sock.write("\r\n");
 
-    while(!sock.eof()) cout << sock.read();
+    while (!sock.eof())
+        cout << sock.read();
 
     sock.shutdown(SHUT_WR);
 }
