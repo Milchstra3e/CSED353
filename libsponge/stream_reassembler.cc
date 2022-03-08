@@ -4,8 +4,14 @@
 
 using namespace std;
 
-StreamReassembler::StreamReassembler(const size_t capacity) : _output(capacity), _capacity(capacity),
-    _unassm_base(0), _unassm_size(0), _eof(false), _buffer(capacity, 0), _buffer_check(capacity, false) {}
+StreamReassembler::StreamReassembler(const size_t capacity)
+    : _output(capacity)
+    , _capacity(capacity)
+    , _unassm_base(0)
+    , _unassm_size(0)
+    , _eof(false)
+    , _buffer(capacity, 0)
+    , _buffer_check(capacity, false) {}
 
 //! \details This function accepts a substring (aka a segment) of bytes,
 //! possibly out-of-order, from the logical stream, and assembles any newly
@@ -17,11 +23,11 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
 
     // push data into buffer
     _eof |= (data_expect == data_end) && eof;
-    for(size_t i = data_begin; i < data_end; i++) {
+    for (size_t i = data_begin; i < data_end; i++) {
         const size_t data_idx = i - index;
         const size_t base_idx = i - _unassm_base;
 
-        if(!_buffer_check[base_idx]) {
+        if (!_buffer_check[base_idx]) {
             _buffer[base_idx] = data[data_idx];
             _buffer_check[base_idx] = true;
             _unassm_size++;
@@ -30,7 +36,7 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
 
     // move data from buffer to bytestream
     string concat_data;
-    for(size_t i = 0; i < _capacity && _buffer_check.front(); i++) {
+    for (size_t i = 0; i < _capacity && _buffer_check.front(); i++) {
         concat_data += _buffer.front();
         _unassm_base++;
         _unassm_size--;
@@ -38,7 +44,8 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
         _buffer_check.pop_front();
     }
     _output.write(concat_data);
-    if(_unassm_size == 0 && _eof) _output.end_input();
+    if (_unassm_size == 0 && _eof)
+        _output.end_input();
 
     // restore total buffer size
     _buffer.resize(_capacity, 0);
@@ -49,6 +56,4 @@ size_t StreamReassembler::unassembled_bytes() const { return _unassm_size; }
 
 bool StreamReassembler::empty() const { return _unassm_size == 0; }
 
-size_t StreamReassembler::_get_upperbound() const {
-    return _capacity + _unassm_base - _output.buffer_size();
-}
+size_t StreamReassembler::_get_upperbound() const { return _capacity + _unassm_base - _output.buffer_size(); }
