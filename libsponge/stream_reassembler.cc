@@ -1,7 +1,5 @@
 #include "stream_reassembler.hh"
 
-#include <iostream>
-
 using namespace std;
 
 StreamReassembler::StreamReassembler(const size_t capacity)
@@ -25,11 +23,11 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
     _eof |= (data_expect == data_end) && eof;
     for (size_t i = data_begin; i < data_end; i++) {
         const size_t data_idx = i - index;
-        const size_t base_idx = i - _unassm_base;
+        const size_t buffer_idx = i - _unassm_base;
 
-        if (!_buffer_check[base_idx]) {
-            _buffer[base_idx] = data[data_idx];
-            _buffer_check[base_idx] = true;
+        if (!_buffer_check[buffer_idx]) {
+            _buffer[buffer_idx] = data[data_idx];
+            _buffer_check[buffer_idx] = true;
             _unassm_size++;
         }
     }
@@ -40,16 +38,18 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
         concat_data += _buffer.front();
         _unassm_base++;
         _unassm_size--;
+
         _buffer.pop_front();
+        _buffer.push_back(0);
+
         _buffer_check.pop_front();
+        _buffer_check.push_back(false);
     }
     _output.write(concat_data);
+
+    // check both eof and end of assembling
     if (_unassm_size == 0 && _eof)
         _output.end_input();
-
-    // restore total buffer size
-    _buffer.resize(_capacity, 0);
-    _buffer_check.resize(_capacity, false);
 }
 
 size_t StreamReassembler::unassembled_bytes() const { return _unassm_size; }
