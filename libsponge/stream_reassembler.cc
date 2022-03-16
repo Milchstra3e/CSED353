@@ -17,7 +17,7 @@ StreamReassembler::StreamReassembler(const size_t capacity)
 void StreamReassembler::push_substring(const string &data, const size_t index, const bool eof) {
     const size_t data_begin = max(index, _unassm_base);
     const size_t data_expect = max(index + data.length(), _unassm_base);
-    const size_t data_end = min(data_expect, _get_upperbound());
+    const size_t data_end = min(data_expect, get_window_size() + get_unassm_base());
 
     // push data into buffer
     _eof |= (data_expect == data_end) && eof;
@@ -55,5 +55,3 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
 size_t StreamReassembler::unassembled_bytes() const { return _unassm_size; }
 
 bool StreamReassembler::empty() const { return _unassm_size == 0; }
-
-size_t StreamReassembler::_get_upperbound() const { return _capacity + _unassm_base - _output.buffer_size(); }

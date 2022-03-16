@@ -21,8 +21,6 @@ class StreamReassembler {
     std::deque<char> _buffer;
     std::deque<bool> _buffer_check;
 
-    size_t _get_upperbound() const;
-
   public:
     //! \brief Construct a `StreamReassembler` that will store up to `capacity` bytes.
     //! \note This capacity limits both the bytes that have been reassembled,
@@ -54,6 +52,9 @@ class StreamReassembler {
     //! \brief Is the internal state empty (other than the output stream)?
     //! \returns `true` if no substrings are waiting to be assembled
     bool empty() const;
+
+    size_t get_window_size() const { return _capacity - _output.buffer_size(); };
+    size_t get_unassm_base() const { return _unassm_base; };
 };
 
 #endif  // SPONGE_LIBSPONGE_STREAM_REASSEMBLER_HH
