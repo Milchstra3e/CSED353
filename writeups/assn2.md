@@ -1,26 +1,27 @@
 Assignment 2 Writeup
 =============
 
-My name: [your name here]
+My name: Changhun Oh
 
-My POVIS ID: [your povis id here]
+My POVIS ID: pcsech16
 
-My student ID (numeric): [your student id here]
+My student ID (numeric): 20160779
 
-This assignment took me about [n] hours to do (including the time on studying, designing, and writing the code).
+This assignment took me about 4 hours to do (including the time on studying, designing, and writing the code).
 
-If you used any part of best-submission codes, specify all the best-submission numbers that you used (e.g., 1, 2): []
+If you used any part of best-submission codes, specify all the best-submission numbers that you used (e.g., 1, 2): I do it all alone.
 
-- **Caution**: If you have no idea about above best-submission item, please refer the Assignment PDF for detailed description.
+## 1. Program Structure and Design of the TCPReceiver
 
-Program Structure and Design of the TCPReceiver and wrap/unwrap routines:
-[]
+### 1.1. Structure of TCPReceiver
 
-Implementation Challenges:
-[]
+### 1.2. Algorithm of TCPReceiver
 
-Remaining Bugs:
-[]
+### 1.3. Algorithm of wrap/unwrap routines
+
+## 2. Implementation Challenges
+
+## 3. Remaining Bugs
 
 - Optional: I had unexpected difficulty with: [describe]
 
