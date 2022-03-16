@@ -15,9 +15,63 @@ If you used any part of best-submission codes, specify all the best-submission n
 
 ### 1.1. Structure of TCPReceiver
 
+I add some attribute in TCPReceiver.
 
+```c++
+WrappingInt32 _isn = WrappingInt32(0);
+bool _is_received_syn = false;
+bool _is_received_fin = false;
+```
++ **_isn**: tracking start sequence number of TCP segment.
++ **_is_received_syn**: tracking receiving TCP segment with syn flag.
++ **_is_received_fin**: tracking receiving TCP segment with fin flag.
 
 ### 1.2. Algorithm of TCPReceiver
+
+#### 1.2.1. Algorithm of segment_received
+
+segment_received routine divides two parts
+
++ tracking syn/fin flag
+    ```c++
+    if (tcp_header.syn && !_is_received_syn) {
+        _is_received_syn = true;
+        _isn = tcp_header.seqno;
+    }
+
+    if (!_is_received_syn)
+        return;
+
+    _is_received_fin |= tcp_header.fin;
+    ```
+    Before receiving TCP segment with syn flag, we should prohibit from doing further progress. To archive this purpose, we're tracking whether to receive it.
+
++ pushing payload into reassembler
+    ```c++
+    const WrappingInt32 relative_str_seqno(tcp_header.seqno + tcp_header.syn);
+    const string &str = seg.payload().copy();
+    const size_t absolute_str_seqno = unwrap(relative_str_seqno,
+                                            _isn,
+                                            _reassembler.get_unassm_base()) - 1;
+
+    _reassembler.push_substring(str, absolute_str_seqno, tcp_header.fin);
+    ```
+    It's enough easy to understand this code without explanation. Because I set naively what eof in _reassembler means, I send eof information when I receive TCP segment with fin flag. 
+
+#### 1.2.2. Algorithm of ackno
+
+ackno routine is like below.
+```c++
+if (!_is_received_syn)
+    return std::nullopt;
+
+const size_t auxiliary_term = _is_received_syn + (_is_received_fin && _reassembler.empty());
+const size_t absolute_seqno = auxiliary_term + _reassembler.get_unassm_base();
+return wrap(absolute_seqno, _isn);
+```
+Ackno should be consider as how many bytes we assembled with auxiliary term (syn/fin flag).
+In case of syn flag, we don't have to care about it, but we should be care of fin flag.
+Only when all characters are received and assembled, fin flag should be added in ackno.
 
 ### 1.3. Algorithm of wrap/unwrap routines
 
@@ -71,12 +125,18 @@ As a result, unwrap algorithm is deriven using above formula.
 
 ## 2. Implementation Challenges
 
+In this assignment, there is no challenge for me to think hard.
+
+Just one thing I spend a little bit is about deriving wrap and unwrap algorithm.
+
 ## 3. Remaining Bugs
 
-- Optional: I had unexpected difficulty with: [describe]
+I can't find any bugs in this assignment.
 
-- Optional: I think you could make this assignment better by: [describe]
+- Optional: I had unexpected difficulty with: At first time, concept of absolute and relative sequence number made me confused.
 
-- Optional: I was surprised by: [describe]
+- Optional: I think you could make this assignment better by: It is enough good to study.
 
-- Optional: I'm not sure about: [describe]
+- Optional: I was surprised by: This assignment is well designed.
+
+- Optional: I'm not sure about: Nothing about it.

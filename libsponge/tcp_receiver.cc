@@ -5,6 +5,7 @@ using namespace std;
 void TCPReceiver::segment_received(const TCPSegment &seg) {
     const TCPHeader &tcp_header = seg.header();
 
+    // tracking syn/fin flag
     if (tcp_header.syn && !_is_received_syn) {
         _is_received_syn = true;
         _isn = tcp_header.seqno;
@@ -15,6 +16,7 @@ void TCPReceiver::segment_received(const TCPSegment &seg) {
 
     _is_received_fin |= tcp_header.fin;
 
+    // pushing payload into reassembler
     const WrappingInt32 relative_str_seqno(tcp_header.seqno + tcp_header.syn);
     const string &str = seg.payload().copy();
     const size_t absolute_str_seqno = unwrap(relative_str_seqno, _isn, _reassembler.get_unassm_base()) - 1;
