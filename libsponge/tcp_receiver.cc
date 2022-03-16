@@ -17,7 +17,7 @@ void TCPReceiver::segment_received(const TCPSegment &seg) {
 
     const WrappingInt32 relative_str_seqno(tcp_header.seqno + tcp_header.syn);
     const string &str = seg.payload().copy();
-    const size_t absolute_str_seqno = unwrap(relative_str_seqno, _isn, _reassembler.get_unassm_base());
+    const size_t absolute_str_seqno = unwrap(relative_str_seqno, _isn, _reassembler.get_unassm_base()) - 1;
 
     _reassembler.push_substring(str, absolute_str_seqno, tcp_header.fin);
 }
