@@ -52,9 +52,9 @@ segment_received routine divides two parts
     const string &str = seg.payload().copy();
     const size_t absolute_str_seqno = unwrap(relative_str_seqno,
                                             _isn,
-                                            _reassembler.get_unassm_base()) - 1;
+                                            _reassembler.get_unassm_base());
 
-    _reassembler.push_substring(str, absolute_str_seqno, tcp_header.fin);
+    _reassembler.push_substring(str, absolute_str_seqno - 1, tcp_header.fin);
     ```
     It's enough easy to understand this code without explanation. Because I set naively what eof in _reassembler means, I send eof information when I receive TCP segment with fin flag. 
 
