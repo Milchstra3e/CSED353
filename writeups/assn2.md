@@ -15,16 +15,19 @@ If you used any part of best-submission codes, specify all the best-submission n
 
 ### 1.1. Structure of TCPReceiver
 
-I add some attribute in TCPReceiver.
+I add some attribute and function in TCPReceiver.
 
 ```c++
 WrappingInt32 _isn = WrappingInt32(0);
 bool _is_received_syn = false;
 bool _is_received_fin = false;
+
+size_t _get_unassm_base() const { return _reassembler.stream_out().bytes_written(); };
 ```
 + **_isn**: tracking start sequence number of TCP segment.
 + **_is_received_syn**: tracking receiving TCP segment with syn flag.
 + **_is_received_fin**: tracking receiving TCP segment with fin flag.
++ **_get_unassm_base**: tracking what seqno current unassembled bytes start.
 
 ### 1.2. Algorithm of TCPReceiver
 
@@ -44,7 +47,7 @@ segment_received routine divides two parts
 
     _is_received_fin |= tcp_header.fin;
     ```
-    Before receiving TCP segment with syn flag, we should prohibit from doing further progress. To archive this purpose, we're tracking whether to receive it.
+    Before receiving TCP segment with syn flag, we should prohibit from doing further progress. To archive this purpose, we're tracking whether to receive it. In the case of fin flag, if received, _is_received_fin set true.
 
 + pushing payload into reassembler
     ```c++
@@ -52,11 +55,11 @@ segment_received routine divides two parts
     const string &str = seg.payload().copy();
     const size_t absolute_str_seqno = unwrap(relative_str_seqno,
                                             _isn,
-                                            _reassembler.get_unassm_base());
+                                            _get_unassm_base());
 
     _reassembler.push_substring(str, absolute_str_seqno - 1, tcp_header.fin);
     ```
-    It's enough easy to understand this code without explanation. Because I set naively what eof in _reassembler means, I send eof information when I receive TCP segment with fin flag. 
+    Relative string seqno is calculated using seqno and syn flag, and is translated into absolute string seqno that is the closest number from what seqno current unassembled bytes start. Whether to send eof is decided by fin flag, because I set mean of _eof in _reassembler naively; _eof will be set true when last order of packet is succesfully received.
 
 #### 1.2.2. Algorithm of ackno
 
@@ -66,7 +69,7 @@ if (!_is_received_syn)
     return std::nullopt;
 
 const size_t auxiliary_term = _is_received_syn + (_is_received_fin && _reassembler.empty());
-const size_t absolute_seqno = auxiliary_term + _reassembler.get_unassm_base();
+const size_t absolute_seqno = auxiliary_term + _get_unassm_base();
 return wrap(absolute_seqno, _isn);
 ```
 Ackno should be consider as how many bytes we assembled with auxiliary term (syn/fin flag).
