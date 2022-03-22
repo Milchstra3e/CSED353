@@ -13,7 +13,6 @@ class StreamReassembler {
   private:
     ByteStream _output;  //!< The reassembled in-order byte stream
     size_t _capacity;    //!< The maximum number of bytes
-    size_t _unassm_base;
     size_t _unassm_size;
 
     bool _eof;
@@ -52,9 +51,6 @@ class StreamReassembler {
     //! \brief Is the internal state empty (other than the output stream)?
     //! \returns `true` if no substrings are waiting to be assembled
     bool empty() const;
-
-    size_t get_window_size() const { return _capacity - _output.buffer_size(); };
-    size_t get_unassm_base() const { return _unassm_base; };
 };
 
 #endif  // SPONGE_LIBSPONGE_STREAM_REASSEMBLER_HH
