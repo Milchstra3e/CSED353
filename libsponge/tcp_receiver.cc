@@ -19,7 +19,7 @@ void TCPReceiver::segment_received(const TCPSegment &seg) {
     // pushing payload into reassembler
     const WrappingInt32 relative_str_seqno(tcp_header.seqno + tcp_header.syn);
     const string &str = seg.payload().copy();
-    const size_t absolute_str_seqno = unwrap(relative_str_seqno, _isn, _reassembler.get_unassm_base());
+    const size_t absolute_str_seqno = unwrap(relative_str_seqno, _isn, _get_unassm_base());
 
     _reassembler.push_substring(str, absolute_str_seqno - 1, tcp_header.fin);
 }
@@ -29,8 +29,8 @@ optional<WrappingInt32> TCPReceiver::ackno() const {
         return std::nullopt;
 
     const size_t auxiliary_term = _is_received_syn + (_is_received_fin && _reassembler.empty());
-    const size_t absolute_seqno = auxiliary_term + _reassembler.get_unassm_base();
+    const size_t absolute_seqno = auxiliary_term + _get_unassm_base();
     return wrap(absolute_seqno, _isn);
 }
 
-size_t TCPReceiver::window_size() const { return _reassembler.get_window_size(); }
+size_t TCPReceiver::window_size() const { return _get_window_size(); }
