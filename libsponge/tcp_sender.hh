@@ -14,9 +14,8 @@ class RetxManager {
     std::queue<std::pair<uint64_t, TCPSegment>> _wait_segments{};
 
     unsigned int _initial_retx_timeout;
-    unsigned int _current_retx_timeout;
+    unsigned int _current_retx_timeout = 0;
     unsigned int _consecutive_retx = 0;
-    uint64_t _curr_ackno = 0;
     size_t _elapsed_time = 0;
 
     bool _alarm_on() const { return !_wait_segments.empty(); };
@@ -57,7 +56,7 @@ class TCPSender {
     uint64_t _next_seqno = 0;
     uint64_t _curr_ackno = 0;
     uint16_t _receiver_window_size = 1;
-    uint16_t _current_window_size = 1;
+    uint16_t _remain_window_size = 1;
 
     RetxManager _retx_manager;
 

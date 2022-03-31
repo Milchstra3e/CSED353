@@ -6,13 +6,14 @@
 
 using namespace std;
 
-RetxManager::RetxManager(const uint16_t retx_timeout)
-    : _initial_retx_timeout(retx_timeout), _current_retx_timeout(retx_timeout) {}
+RetxManager::RetxManager(const uint16_t retx_timeout) : _initial_retx_timeout(retx_timeout) {}
 
 void RetxManager::update(const uint64_t absolute_ackno) {
-    if (!_alarm_on() || absolute_ackno <= _curr_ackno)
+    if (!_alarm_on())
         return;
-    _curr_ackno = absolute_ackno;
+
+    if (absolute_ackno <= _wait_segments.front().first)
+        return;
 
     while (!_wait_segments.empty()) {
         const TCPSegment &earliest_segment = _wait_segments.front().second;
@@ -74,8 +75,8 @@ void TCPSender::fill_window() {
     const bool fin = (_stream.input_ended() && !_eof);
     const uint16_t required_window_size = syn + _stream.buffer_size() + fin;
 
-    const bool has_fin = _current_window_size >= required_window_size;
-    const uint16_t total_payload_size = min(_current_window_size, required_window_size) - syn - (fin && has_fin);
+    const bool has_fin = _remain_window_size >= required_window_size;
+    const uint16_t total_payload_size = min(_remain_window_size, required_window_size) - syn - (fin && has_fin);
 
     const unsigned int segment_cnt =
         total_payload_size / TCPConfig::MAX_PAYLOAD_SIZE + (total_payload_size % TCPConfig::MAX_PAYLOAD_SIZE > 0);
@@ -96,15 +97,15 @@ void TCPSender::fill_window() {
         _retx_manager.push_segment(_next_seqno, segment);
 
         _next_seqno += segment.length_in_sequence_space();
-        _current_window_size -= segment.length_in_sequence_space();
+        _remain_window_size -= segment.length_in_sequence_space();
         _eof |= has_fin && fin && is_last_iteration;
     }
 
-    if (_current_window_size) {
+    if (_remain_window_size) {
         if (syn) {
             const TCPSegment segment = _gen_segment(0, true, false, string());
             _next_seqno++;
-            _current_window_size--;
+            _remain_window_size--;
 
             _segments_out.push(segment);
             _retx_manager.push_segment(0, segment);
@@ -113,7 +114,7 @@ void TCPSender::fill_window() {
         if (fin && !_eof) {
             const TCPSegment segment = _gen_segment(_next_seqno, false, true, string());
             _next_seqno++;
-            _current_window_size--;
+            _remain_window_size--;
             _eof |= fin;
 
             _segments_out.push(segment);
@@ -125,15 +126,15 @@ void TCPSender::fill_window() {
 //! \param ackno The remote receiver's ackno (acknowledgment number)
 //! \param window_size The remote receiver's advertised window size
 void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_size) {
-    const uint64_t tmp_curr_ackno = unwrap(ackno, _isn, _next_seqno);
+    const uint64_t absolute_ackno = unwrap(ackno, _isn, _next_seqno);
 
-    if (tmp_curr_ackno <= _next_seqno) {
-        _curr_ackno = max(_curr_ackno, tmp_curr_ackno);
+    if (absolute_ackno <= _next_seqno) {
+        _curr_ackno = max(_curr_ackno, absolute_ackno);
         _receiver_window_size = window_size;
 
-        const uint16_t tmp_window_size = max(window_size, uint16_t(1));
+        const uint16_t actual_window_size = max(window_size, uint16_t(1));
 
-        _current_window_size = max(uint64_t(0), tmp_window_size - (_next_seqno - _curr_ackno));
+        _remain_window_size = max(actual_window_size - (_next_seqno - _curr_ackno), uint64_t(0));
         _retx_manager.update(_curr_ackno);
     }
 }
@@ -150,7 +151,7 @@ unsigned int TCPSender::consecutive_retransmissions() const { return _retx_manag
 
 void TCPSender::send_empty_segment() {
     const TCPSegment segment = _gen_segment(_next_seqno, false, false, string());
-    _segments_out.push(segment);    
+    _segments_out.push(segment);
 }
 
 TCPSegment TCPSender::_gen_segment(uint64_t absolute_seqno, bool syn, bool fin, string payload) {
@@ -167,4 +168,3 @@ TCPSegment TCPSender::_gen_segment(uint64_t absolute_seqno, bool syn, bool fin, 
 
     return segment;
 }
-
