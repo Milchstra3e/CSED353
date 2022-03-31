@@ -9,6 +9,30 @@
 #include <functional>
 #include <queue>
 
+class RetxManager {
+  private:
+    std::queue<std::pair<uint64_t, TCPSegment>> _wait_segments{};
+
+    unsigned int _initial_retx_timeout;
+    unsigned int _current_retx_timeout;
+    unsigned int _consecutive_retx = 0;
+    uint64_t _curr_ackno = 0;
+    size_t _elapsed_time = 0;
+
+    bool _alarm_on() const { return !_wait_segments.empty(); };
+
+  public:
+    RetxManager(const uint16_t retx_timeout);
+
+    void update(const uint64_t absolute_ackno);
+    void alarm_reset();
+    void push_segment(const uint64_t absolute_seqno, const TCPSegment segment);
+
+    std::optional<TCPSegment> alarm_check(const size_t ms_since_last_tick, const uint16_t receiver_window_size);
+
+    unsigned int get_consecutive_retx() const { return _consecutive_retx; };
+};
+
 //! \brief The "sender" part of a TCP implementation.
 
 //! Accepts a ByteStream, divides it up into segments and sends the
@@ -31,6 +55,8 @@ class TCPSender {
 
     //! the (absolute) sequence number for the next byte to be sent
     uint64_t _next_seqno{0};
+
+    RetxManager _retx_manager;
 
   public:
     //! Initialize a TCPSender
