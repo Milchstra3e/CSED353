@@ -12,21 +12,13 @@ void RetxManager::update(const uint64_t absolute_ackno) {
     if (!_alarm_on())
         return;
 
-    if (absolute_ackno <= _wait_segments.front().first)
-        return;
-
     while (!_wait_segments.empty()) {
-        const TCPSegment &earliest_segment = _wait_segments.front().second;
-        const uint64_t earliest_absolute_upperbound =
-            _wait_segments.front().first + earliest_segment.length_in_sequence_space();
-
-        if (earliest_absolute_upperbound > absolute_ackno)
+        if (_wait_segments.front().first > absolute_ackno)
             break;
 
         _wait_segments.pop();
+        alarm_reset();
     }
-
-    alarm_reset();
 }
 
 void RetxManager::alarm_reset() {
@@ -93,32 +85,32 @@ void TCPSender::fill_window() {
         const TCPSegment segment =
             _gen_segment(_next_seqno, syn && is_first_iteration, has_fin && fin && is_last_iteration, payload);
 
-        _segments_out.push(segment);
-        _retx_manager.push_segment(_next_seqno, segment);
-
         _next_seqno += segment.length_in_sequence_space();
         _remain_window_size -= segment.length_in_sequence_space();
         _eof |= has_fin && fin && is_last_iteration;
+        
+        _segments_out.push(segment);
+        _retx_manager.push_segment(_next_seqno, segment);
     }
 
     if (_remain_window_size) {
         if (syn) {
             const TCPSegment segment = _gen_segment(0, true, false, string());
+            _segments_out.push(segment);
+            _retx_manager.push_segment(1, segment);
+
             _next_seqno++;
             _remain_window_size--;
-
-            _segments_out.push(segment);
-            _retx_manager.push_segment(0, segment);
         }
 
         if (fin && !_eof) {
             const TCPSegment segment = _gen_segment(_next_seqno, false, true, string());
+            _segments_out.push(segment);
+            _retx_manager.push_segment(_next_seqno + 1, segment);
+
             _next_seqno++;
             _remain_window_size--;
             _eof |= fin;
-
-            _segments_out.push(segment);
-            _retx_manager.push_segment(_next_seqno, segment);
         }
     }
 }
