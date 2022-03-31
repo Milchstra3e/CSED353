@@ -63,7 +63,7 @@ class TCPSender {
 
     bool _eof = false;
 
-    TCPSegment _gen_segment(WrappingInt32 seqno, bool syn, bool fin, std::string payload);
+    TCPSegment _gen_segment(uint64_t absolute_seqno, bool syn, bool fin, std::string payload);
     uint64_t _gen_absolute_seqno(WrappingInt32 relative_seqno) { return unwrap(relative_seqno, _isn, _next_seqno); };
 
   public:

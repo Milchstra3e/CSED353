@@ -4,14 +4,6 @@
 
 #include <random>
 
-// Dummy implementation of a TCP sender
-
-// For Lab 3, please replace with a real implementation that passes the
-// automated checks run by `make check_lab3`.
-
-template <typename... Targs>
-void DUMMY_CODE(Targs &&... /* unused */) {}
-
 using namespace std;
 
 RetxManager::RetxManager(const uint16_t retx_timeout)
@@ -69,7 +61,7 @@ optional<TCPSegment> RetxManager::alarm_check(const size_t ms_since_last_tick, c
 //! \param[in] capacity the capacity of the outgoing byte stream
 //! \param[in] retx_timeout the initial amount of time to wait before retransmitting the oldest outstanding segment
 //! \param[in] fixed_isn the Initial Sequence Number to use, if set (otherwise uses a random ISN)
-TCPSender::TCPSender(const size_t capacity, const uint16_t retx_timeout, const std::optional<WrappingInt32> fixed_isn)
+TCPSender::TCPSender(const size_t capacity, const uint16_t retx_timeout, const optional<WrappingInt32> fixed_isn)
     : _isn(fixed_isn.value_or(WrappingInt32{random_device()()}))
     , _initial_retransmission_timeout{retx_timeout}
     , _stream(capacity)
@@ -98,7 +90,7 @@ void TCPSender::fill_window() {
         const bool is_last_iteration = (i + 1 == segment_cnt);
 
         const TCPSegment segment =
-            _gen_segment(_isn + _next_seqno, syn && is_first_iteration, has_fin && fin && is_last_iteration, payload);
+            _gen_segment(_next_seqno, syn && is_first_iteration, has_fin && fin && is_last_iteration, payload);
 
         _segments_out.push(segment);
         _retx_manager.push_segment(_gen_absolute_seqno(_isn + _next_seqno), segment);
@@ -110,7 +102,7 @@ void TCPSender::fill_window() {
 
     if (_current_window_size) {
         if (syn) {
-            const TCPSegment segment = _gen_segment(_isn, true, false, string());
+            const TCPSegment segment = _gen_segment(uint64_t(0), true, false, string());
             _next_seqno++;
             _current_window_size--;
 
@@ -119,7 +111,7 @@ void TCPSender::fill_window() {
         }
 
         if (fin && !_eof) {
-            const TCPSegment segment = _gen_segment(_isn + _next_seqno, false, true, string());
+            const TCPSegment segment = _gen_segment(_next_seqno, false, true, string());
             _next_seqno++;
             _current_window_size--;
             _eof |= fin;
@@ -157,17 +149,17 @@ void TCPSender::tick(const size_t ms_since_last_tick) {
 unsigned int TCPSender::consecutive_retransmissions() const { return _retx_manager.get_consecutive_retx(); }
 
 void TCPSender::send_empty_segment() {
-    const TCPSegment segment = _gen_segment(wrap(_next_seqno, _isn), false, false, string());
+    const TCPSegment segment = _gen_segment(_next_seqno, false, false, string());
     _segments_out.push(segment);    
 }
 
-TCPSegment TCPSender::_gen_segment(WrappingInt32 seqno, bool syn, bool fin, string payload) {
+TCPSegment TCPSender::_gen_segment(uint64_t absolute_seqno, bool syn, bool fin, string payload) {
     TCPSegment segment;
 
     TCPHeader &tcp_header = segment.header();
     Buffer &tcp_payload = segment.payload();
 
-    tcp_header.seqno = seqno;
+    tcp_header.seqno = wrap(absolute_seqno, _isn);
     tcp_header.syn = syn;
     tcp_header.fin = fin;
 
