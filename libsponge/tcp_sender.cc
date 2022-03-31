@@ -63,25 +63,29 @@ TCPSender::TCPSender(const size_t capacity, const uint16_t retx_timeout, const o
 uint64_t TCPSender::bytes_in_flight() const { return _next_seqno - _curr_ackno; }
 
 void TCPSender::fill_window() {
+    const uint16_t MAX_PAYLOAD_SIZE = uint16_t(TCPConfig::MAX_PAYLOAD_SIZE);
+
     const bool contain_syn = (_next_seqno == 0);
     const bool contain_fin = (_stream.input_ended() && !_sent_fin);
     const uint16_t required_window_size = contain_syn + _stream.buffer_size() + contain_fin;
-    const uint16_t window_size = min(_remain_window_size, required_window_size);
-    const bool has_enough_window = _remain_window_size >= required_window_size;
 
-    const unsigned int segment_cnt =
-        window_size / TCPConfig::MAX_PAYLOAD_SIZE + (window_size % TCPConfig::MAX_PAYLOAD_SIZE > 0);
+    const bool has_enough_window = _remain_window_size >= required_window_size;
+    const uint16_t window_size = min(_remain_window_size, required_window_size);
+    const uint16_t payload_size = window_size - contain_syn - (has_enough_window && contain_fin);
+
+    const bool has_flag = contain_syn || (has_enough_window && contain_fin);
+    const unsigned int payload_segment_cnt = (payload_size + MAX_PAYLOAD_SIZE - 1) / MAX_PAYLOAD_SIZE;
+    const unsigned int segment_cnt = max(payload_segment_cnt, static_cast<unsigned int>(has_flag));
 
     for (unsigned int i = 0; i < segment_cnt; i++) {
         const bool is_first_iter = (i == 0);
         const bool is_last_iter = (i + 1 == segment_cnt);
 
-        const bool syn = contain_syn && is_first_iter;
-        const bool fin = contain_fin && has_enough_window && is_last_iter;
+        const bool syn = is_first_iter && contain_syn;
+        const bool fin = is_last_iter && has_enough_window && contain_fin;
 
-        const uint16_t remain_payload_size = window_size - i * TCPConfig::MAX_PAYLOAD_SIZE;
-        const uint16_t read_bytes =
-            min(static_cast<size_t>(remain_payload_size), TCPConfig::MAX_PAYLOAD_SIZE) - syn - fin;
+        const uint16_t remain_payload_size = payload_size - i * MAX_PAYLOAD_SIZE;
+        const uint16_t read_bytes = min(remain_payload_size, MAX_PAYLOAD_SIZE);
         const string payload = _stream.read(read_bytes);
 
         const TCPSegment segment = _gen_segment(_next_seqno, syn, fin, payload);
@@ -105,8 +109,13 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
         _receiver_window_size = window_size;
 
         const uint16_t actual_window_size = max(window_size, uint16_t(1));
+        const uint64_t bytes_in_flight_size = bytes_in_flight();
 
-        _remain_window_size = max(actual_window_size - (_next_seqno - _curr_ackno), uint64_t(0));
+        if (actual_window_size > bytes_in_flight_size)
+            _remain_window_size = actual_window_size - bytes_in_flight_size;
+        else
+            _remain_window_size = 0;
+
         _retx_manager.update(_curr_ackno);
     }
 }
