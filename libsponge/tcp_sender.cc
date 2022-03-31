@@ -89,3 +89,19 @@ void TCPSender::tick(const size_t ms_since_last_tick) { DUMMY_CODE(ms_since_last
 unsigned int TCPSender::consecutive_retransmissions() const { return {}; }
 
 void TCPSender::send_empty_segment() {}
+
+TCPSegment TCPSender::_gen_segment(WrappingInt32 seqno, bool syn, bool fin, string payload) {
+    TCPSegment segment;
+
+    TCPHeader &tcp_header = segment.header();
+    Buffer &tcp_payload = segment.payload();
+
+    tcp_header.seqno = seqno;
+    tcp_header.syn = syn;
+    tcp_header.fin = fin;
+
+    tcp_payload = Buffer(move(payload));
+
+    return segment;
+}
+

@@ -54,9 +54,17 @@ class TCPSender {
     ByteStream _stream;
 
     //! the (absolute) sequence number for the next byte to be sent
-    uint64_t _next_seqno{0};
+    uint64_t _next_seqno = 0;
+    uint64_t _curr_ackno = 0;
+    uint16_t _receiver_window_size = 1;
+    uint16_t _current_window_size = 1;
 
     RetxManager _retx_manager;
+
+    bool _eof = false;
+
+    TCPSegment _gen_segment(WrappingInt32 seqno, bool syn, bool fin, std::string payload);
+    uint64_t _gen_absolute_seqno(WrappingInt32 relative_seqno) { return unwrap(relative_seqno, _isn, _next_seqno); };
 
   public:
     //! Initialize a TCPSender
