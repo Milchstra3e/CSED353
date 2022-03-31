@@ -63,58 +63,35 @@ TCPSender::TCPSender(const size_t capacity, const uint16_t retx_timeout, const o
 uint64_t TCPSender::bytes_in_flight() const { return _next_seqno - _curr_ackno; }
 
 void TCPSender::fill_window() {
-    const bool syn = (_next_seqno == 0);
-    const bool fin = (_stream.input_ended() && !_sent_fin);
-    const uint16_t required_window_size = syn + _stream.buffer_size() + fin;
-
-    const bool has_fin = fin && (_remain_window_size >= required_window_size);
-    const uint16_t total_payload_size = min(_remain_window_size, required_window_size) - syn - has_fin;
+    const bool contain_syn = (_next_seqno == 0);
+    const bool contain_fin = (_stream.input_ended() && !_sent_fin);
+    const uint16_t required_window_size = contain_syn + _stream.buffer_size() + contain_fin;
+    const uint16_t window_size = min(_remain_window_size, required_window_size);
+    const bool has_enough_window = _remain_window_size >= required_window_size;
 
     const unsigned int segment_cnt =
-        total_payload_size / TCPConfig::MAX_PAYLOAD_SIZE + (total_payload_size % TCPConfig::MAX_PAYLOAD_SIZE > 0);
+        window_size / TCPConfig::MAX_PAYLOAD_SIZE + (window_size % TCPConfig::MAX_PAYLOAD_SIZE > 0);
 
     for (unsigned int i = 0; i < segment_cnt; i++) {
-        const uint16_t remain_payload_size = total_payload_size - i * TCPConfig::MAX_PAYLOAD_SIZE;
-        const uint16_t read_bytes = min(static_cast<size_t>(remain_payload_size), TCPConfig::MAX_PAYLOAD_SIZE);
+        const bool is_first_iter = (i == 0);
+        const bool is_last_iter = (i + 1 == segment_cnt);
 
+        const bool syn = contain_syn && is_first_iter;
+        const bool fin = contain_fin && has_enough_window && is_last_iter;
+
+        const uint16_t remain_payload_size = window_size - i * TCPConfig::MAX_PAYLOAD_SIZE;
+        const uint16_t read_bytes =
+            min(static_cast<size_t>(remain_payload_size), TCPConfig::MAX_PAYLOAD_SIZE) - syn - fin;
         const string payload = _stream.read(read_bytes);
 
-        const bool is_first_iteration = (i == 0);
-        const bool is_last_iteration = (i + 1 == segment_cnt);
-
-        const TCPSegment segment =
-            _gen_segment(_next_seqno, syn && is_first_iteration, has_fin && is_last_iteration, payload);
+        const TCPSegment segment = _gen_segment(_next_seqno, syn, fin, payload);
 
         _next_seqno += segment.length_in_sequence_space();
         _remain_window_size -= segment.length_in_sequence_space();
-        _sent_fin |= has_fin && is_last_iteration;
+        _sent_fin |= fin;
 
         _segments_out.push(segment);
         _retx_manager.push_segment(_next_seqno, segment);
-    }
-
-    if (_remain_window_size) {
-        if (syn) {
-            const TCPSegment segment = _gen_segment(_next_seqno, true, false, string());
-
-            _next_seqno++;
-            _remain_window_size--;
-
-            _segments_out.push(segment);
-            _retx_manager.push_segment(_next_seqno, segment);
-        }
-
-        if (fin && !_sent_fin) {
-            const TCPSegment segment = _gen_segment(_next_seqno, false, true, string());
-
-            _next_seqno++;
-            _remain_window_size--;
-
-            _segments_out.push(segment);
-            _retx_manager.push_segment(_next_seqno, segment);
-
-            _sent_fin = true;
-        }
     }
 }
 
