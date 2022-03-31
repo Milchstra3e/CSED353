@@ -64,7 +64,7 @@ uint64_t TCPSender::bytes_in_flight() const { return _next_seqno - _curr_ackno; 
 
 void TCPSender::fill_window() {
     const bool syn = (_next_seqno == 0);
-    const bool fin = (_stream.input_ended() && !_is_closed);
+    const bool fin = (_stream.input_ended() && !_sent_fin);
     const uint16_t required_window_size = syn + _stream.buffer_size() + fin;
 
     const bool has_fin = fin && (_remain_window_size >= required_window_size);
@@ -87,7 +87,7 @@ void TCPSender::fill_window() {
 
         _next_seqno += segment.length_in_sequence_space();
         _remain_window_size -= segment.length_in_sequence_space();
-        _is_closed |= has_fin && is_last_iteration;
+        _sent_fin |= has_fin && is_last_iteration;
 
         _segments_out.push(segment);
         _retx_manager.push_segment(_next_seqno, segment);
@@ -104,7 +104,7 @@ void TCPSender::fill_window() {
             _retx_manager.push_segment(_next_seqno, segment);
         }
 
-        if (fin && !_is_closed) {
+        if (fin && !_sent_fin) {
             const TCPSegment segment = _gen_segment(_next_seqno, false, true, string());
 
             _next_seqno++;
@@ -113,7 +113,7 @@ void TCPSender::fill_window() {
             _segments_out.push(segment);
             _retx_manager.push_segment(_next_seqno, segment);
 
-            _is_closed = true;
+            _sent_fin = true;
         }
     }
 }

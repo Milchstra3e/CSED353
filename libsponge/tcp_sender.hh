@@ -60,7 +60,7 @@ class TCPSender {
 
     RetxManager _retx_manager;
 
-    bool _is_closed = false;
+    bool _sent_fin = false;
 
     TCPSegment _gen_segment(uint64_t absolute_seqno, bool syn, bool fin, std::string payload);
 
