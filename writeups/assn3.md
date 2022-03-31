@@ -162,10 +162,35 @@ Fill_window function is divided into four parts.
     ```
     Fill each segment with flag and bytes by using variable derived from above three steps.
 
-
 ##### 1.2.2.2. Algorithm of ack_received
+```c++
+const uint64_t absolute_ackno = unwrap(ackno, _isn, _next_seqno);
+
+if (absolute_ackno <= _next_seqno) {
+    _curr_ackno = max(_curr_ackno, absolute_ackno);
+    _receiver_window_size = window_size;
+
+    const uint16_t actual_window_size = max(window_size, uint16_t(1));
+    const uint64_t bytes_in_flight_size = bytes_in_flight();
+
+    if (actual_window_size > bytes_in_flight_size)
+        _remain_window_size = actual_window_size - bytes_in_flight_size;
+    else
+        _remain_window_size = 0;
+
+    _retx_manager.update(_curr_ackno);
+}
+```
+Check whether received ackno is valid by comparing _next_seqno, after then update _curr_ackno, _remain_window_size and _retx_manager with window_size and received ackno.
 
 ## 2. Implementation Challenges
+In this assignment 3, there are two implementation challenges.
+
+## 2.1. Design of RetxManager Class
+It is big challenge in this assignment. I want to avoid using unnecessary duplicated parameter, because it will lead to the problem of synchronization between RetxManager and TCPSender. Therefore, I had to decide how many kinds of information should be given as initialized factors and parameters.
+
+## 2.2. Design of fill_dinwo function
+It is easy to program without generality. First of time, I solve this assignment by dividing some cases. It bring about breaking generality and being not so beautiful. Therefore, after then, I tried to find the way how to generalied generation of segment. The answer is this code.
 
 ## 3. Remaining Bugs
 I can't find any bugs in this assignment.
