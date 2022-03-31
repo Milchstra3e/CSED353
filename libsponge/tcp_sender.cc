@@ -93,7 +93,7 @@ void TCPSender::fill_window() {
             _gen_segment(_next_seqno, syn && is_first_iteration, has_fin && fin && is_last_iteration, payload);
 
         _segments_out.push(segment);
-        _retx_manager.push_segment(_gen_absolute_seqno(_isn + _next_seqno), segment);
+        _retx_manager.push_segment(_next_seqno, segment);
 
         _next_seqno += segment.length_in_sequence_space();
         _current_window_size -= segment.length_in_sequence_space();
@@ -102,12 +102,12 @@ void TCPSender::fill_window() {
 
     if (_current_window_size) {
         if (syn) {
-            const TCPSegment segment = _gen_segment(uint64_t(0), true, false, string());
+            const TCPSegment segment = _gen_segment(0, true, false, string());
             _next_seqno++;
             _current_window_size--;
 
             _segments_out.push(segment);
-            _retx_manager.push_segment(_gen_absolute_seqno(_isn), segment);
+            _retx_manager.push_segment(0, segment);
         }
 
         if (fin && !_eof) {
@@ -117,7 +117,7 @@ void TCPSender::fill_window() {
             _eof |= fin;
 
             _segments_out.push(segment);
-            _retx_manager.push_segment(_gen_absolute_seqno(_isn + _next_seqno), segment);
+            _retx_manager.push_segment(_next_seqno, segment);
         }
     }
 }
@@ -125,7 +125,7 @@ void TCPSender::fill_window() {
 //! \param ackno The remote receiver's ackno (acknowledgment number)
 //! \param window_size The remote receiver's advertised window size
 void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_size) {
-    const uint64_t tmp_curr_ackno = _gen_absolute_seqno(ackno);
+    const uint64_t tmp_curr_ackno = unwrap(ackno, _isn, _next_seqno);
 
     if (tmp_curr_ackno <= _next_seqno) {
         _curr_ackno = max(_curr_ackno, tmp_curr_ackno);
