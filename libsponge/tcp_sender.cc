@@ -65,18 +65,22 @@ uint64_t TCPSender::bytes_in_flight() const { return _next_seqno - _curr_ackno; 
 void TCPSender::fill_window() {
     const uint16_t MAX_PAYLOAD_SIZE = uint16_t(TCPConfig::MAX_PAYLOAD_SIZE);
 
+    // Computation all of related flags
     const bool contain_syn = (_next_seqno == 0);
     const bool contain_fin = (_stream.input_ended() && !_sent_fin);
     const uint16_t required_window_size = contain_syn + _stream.buffer_size() + contain_fin;
-
     const bool has_enough_window = _remain_window_size >= required_window_size;
+    const bool has_flag = contain_syn || (has_enough_window && contain_fin);
+
+    // Calculate actual used window / payload size
     const uint16_t window_size = min(_remain_window_size, required_window_size);
     const uint16_t payload_size = window_size - contain_syn - (has_enough_window && contain_fin);
 
-    const bool has_flag = contain_syn || (has_enough_window && contain_fin);
+    // Calculate actual the number of segment
     const unsigned int payload_segment_cnt = (payload_size + MAX_PAYLOAD_SIZE - 1) / MAX_PAYLOAD_SIZE;
     const unsigned int segment_cnt = max(payload_segment_cnt, static_cast<unsigned int>(has_flag));
 
+    // Fill each segment with flag and bytes
     for (unsigned int i = 0; i < segment_cnt; i++) {
         const bool is_first_iter = (i == 0);
         const bool is_last_iter = (i + 1 == segment_cnt);
