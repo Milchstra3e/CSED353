@@ -189,7 +189,7 @@ In this assignment 3, there are two implementation challenges.
 ## 2.1. Design of RetxManager Class
 It is big challenge in this assignment. I want to avoid using unnecessary duplicated parameter, because it will lead to the problem of synchronization between RetxManager and TCPSender. Therefore, I had to decide how many kinds of information should be given as initialized factors and parameters.
 
-## 2.2. Design of fill_dinwo function
+## 2.2. Design of fill_window function
 It is easy to program without generality. First of time, I solve this assignment by dividing some cases. It bring about breaking generality and being not so beautiful. Therefore, after then, I tried to find the way how to generalied generation of segment. The answer is this code.
 
 ## 3. Remaining Bugs
