@@ -27,7 +27,7 @@ class RetxManager {
     void alarm_reset();
     void push_segment(const uint64_t absolute_seqno, const TCPSegment segment);
 
-    std::optional<TCPSegment> alarm_check(const size_t ms_since_last_tick, const uint16_t receiver_window_size);
+    std::optional<TCPSegment> check_alarm(const size_t ms_since_last_tick, const uint16_t receiver_window_size);
 
     unsigned int get_consecutive_retx() const { return _consecutive_retx; };
 };
@@ -60,7 +60,7 @@ class TCPSender {
 
     RetxManager _retx_manager;
 
-    bool _eof = false;
+    bool _is_closed = false;
 
     TCPSegment _gen_segment(uint64_t absolute_seqno, bool syn, bool fin, std::string payload);
 

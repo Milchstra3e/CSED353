@@ -34,7 +34,7 @@ void RetxManager::push_segment(const uint64_t absolute_seqno, const TCPSegment s
     _wait_segments.push(make_pair(absolute_seqno, segment));
 }
 
-optional<TCPSegment> RetxManager::alarm_check(const size_t ms_since_last_tick, const uint16_t receiver_window_size) {
+optional<TCPSegment> RetxManager::check_alarm(const size_t ms_since_last_tick, const uint16_t receiver_window_size) {
     if (!_alarm_on())
         return nullopt;
 
@@ -64,11 +64,11 @@ uint64_t TCPSender::bytes_in_flight() const { return _next_seqno - _curr_ackno; 
 
 void TCPSender::fill_window() {
     const bool syn = (_next_seqno == 0);
-    const bool fin = (_stream.input_ended() && !_eof);
+    const bool fin = (_stream.input_ended() && !_is_closed);
     const uint16_t required_window_size = syn + _stream.buffer_size() + fin;
 
-    const bool has_fin = _remain_window_size >= required_window_size;
-    const uint16_t total_payload_size = min(_remain_window_size, required_window_size) - syn - (fin && has_fin);
+    const bool has_fin = fin && (_remain_window_size >= required_window_size);
+    const uint16_t total_payload_size = min(_remain_window_size, required_window_size) - syn - has_fin;
 
     const unsigned int segment_cnt =
         total_payload_size / TCPConfig::MAX_PAYLOAD_SIZE + (total_payload_size % TCPConfig::MAX_PAYLOAD_SIZE > 0);
@@ -83,34 +83,37 @@ void TCPSender::fill_window() {
         const bool is_last_iteration = (i + 1 == segment_cnt);
 
         const TCPSegment segment =
-            _gen_segment(_next_seqno, syn && is_first_iteration, has_fin && fin && is_last_iteration, payload);
+            _gen_segment(_next_seqno, syn && is_first_iteration, has_fin && is_last_iteration, payload);
 
         _next_seqno += segment.length_in_sequence_space();
         _remain_window_size -= segment.length_in_sequence_space();
-        _eof |= has_fin && fin && is_last_iteration;
-        
+        _is_closed |= has_fin && is_last_iteration;
+
         _segments_out.push(segment);
         _retx_manager.push_segment(_next_seqno, segment);
     }
 
     if (_remain_window_size) {
         if (syn) {
-            const TCPSegment segment = _gen_segment(0, true, false, string());
-            _segments_out.push(segment);
-            _retx_manager.push_segment(1, segment);
+            const TCPSegment segment = _gen_segment(_next_seqno, true, false, string());
 
             _next_seqno++;
             _remain_window_size--;
+
+            _segments_out.push(segment);
+            _retx_manager.push_segment(_next_seqno, segment);
         }
 
-        if (fin && !_eof) {
+        if (fin && !_is_closed) {
             const TCPSegment segment = _gen_segment(_next_seqno, false, true, string());
-            _segments_out.push(segment);
-            _retx_manager.push_segment(_next_seqno + 1, segment);
 
             _next_seqno++;
             _remain_window_size--;
-            _eof |= fin;
+
+            _segments_out.push(segment);
+            _retx_manager.push_segment(_next_seqno, segment);
+
+            _is_closed = true;
         }
     }
 }
@@ -133,7 +136,7 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
 void TCPSender::tick(const size_t ms_since_last_tick) {
-    const optional<TCPSegment> retx_segment = _retx_manager.alarm_check(ms_since_last_tick, _receiver_window_size);
+    const optional<TCPSegment> retx_segment = _retx_manager.check_alarm(ms_since_last_tick, _receiver_window_size);
 
     if (retx_segment.has_value())
         _segments_out.push(retx_segment.value());
