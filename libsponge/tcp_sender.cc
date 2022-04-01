@@ -68,12 +68,12 @@ void TCPSender::fill_window() {
     // Computation all of related flags
     const bool contain_syn = (_next_seqno == 0);
     const bool contain_fin = (_stream.input_ended() && !_sent_fin);
-    const uint16_t required_window_size = contain_syn + _stream.buffer_size() + contain_fin;
+    const size_t required_window_size = contain_syn + _stream.buffer_size() + contain_fin;
     const bool has_enough_window = _remain_window_size >= required_window_size;
     const bool has_flag = contain_syn || (has_enough_window && contain_fin);
 
     // Calculate actual used window / payload size
-    const uint16_t window_size = min(_remain_window_size, required_window_size);
+    const uint16_t window_size = min(static_cast<size_t>(_remain_window_size), required_window_size);
     const uint16_t payload_size = window_size - contain_syn - (has_enough_window && contain_fin);
 
     // Calculate actual the number of segment
@@ -121,6 +121,8 @@ void TCPSender::ack_received(const WrappingInt32 ackno, const uint16_t window_si
             _remain_window_size = 0;
 
         _retx_manager.update(_curr_ackno);
+
+        fill_window();
     }
 }
 
