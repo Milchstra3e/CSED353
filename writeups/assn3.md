@@ -45,7 +45,7 @@ public:
     + **_elapsed_time**: Elapsed time since alarm is on.
     + **_alarm_on**: Whether to run alarm now.
 + Public methods
-    + **update**: Whenever received new ackno and call this, it will update _wait_segments.
+    + **update**: Whenever received new ackno and call this, it will update _wait_segments and remove elements related to successfully received ackno.
     + **alarm_reset**: Reset alarm or Turn off alarm.
     + **push_segment**: Add new segment into _wait_segments.
     + **check_alarm**: As time passed, it is tracking whether to resend segments.
@@ -119,14 +119,14 @@ Fill_window function is divided into four parts.
     + **contain_fin**: In the case of ideal situation, after calling fill_window, if one segment has flag **fin**, then this flag set true.
     + **required_window_size**: It means how many window size are needed to send succesfully all information in the case of ideal situation.
     + **has_enough_window**: Whether to support required_window_size in current real situation.
-    + **has_flag**: If there is one segment to have flag either **syn** or **fin** in current real situation, this flag set true. 
+    + **has_flag**: After calling fill_window, if there is one segment to have flag either **syn** or **fin** in current real situation, this flag set true. 
 
 + Calculate actual used window / payload size
     ```c++
     const uint16_t window_size = min(_remain_window_size, required_window_size);
     const uint16_t payload_size = window_size - contain_syn - (has_enough_window && contain_fin);
     ```
-    + **window_size**: How many window_size are used now.
+    + **window_size**: How many window_size can be used now.
     + **payload_size**: How many bytes are sent now.
 
 + Calculate actual the number of segment
@@ -179,6 +179,8 @@ if (absolute_ackno <= _next_seqno) {
         _remain_window_size = 0;
 
     _retx_manager.update(_curr_ackno);
+    
+    fill_window();
 }
 ```
 Check whether received ackno is valid by comparing _next_seqno, after then update _curr_ackno, _remain_window_size and _retx_manager with window_size and received ackno.
@@ -186,10 +188,10 @@ Check whether received ackno is valid by comparing _next_seqno, after then updat
 ## 2. Implementation Challenges
 In this assignment 3, there are two implementation challenges.
 
-## 2.1. Design of RetxManager Class
+### 2.1. Design of RetxManager Class
 It is big challenge in this assignment. I want to avoid using unnecessary duplicated parameter, because it will lead to the problem of synchronization between RetxManager and TCPSender. Therefore, I had to decide how many kinds of information should be given as initialized factors and parameters.
 
-## 2.2. Design of fill_window function
+### 2.2. Design of fill_window function
 It is easy to program without generality. First of time, I solve this assignment by dividing some cases. It bring about breaking generality and being not so beautiful. Therefore, after then, I tried to find the way how to generalied generation of segment. The answer is this code.
 
 ## 3. Remaining Bugs
