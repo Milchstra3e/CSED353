@@ -2,14 +2,6 @@
 
 #include <iostream>
 
-// Dummy implementation of a TCP connection
-
-// For Lab 4, please replace with a real implementation that passes the
-// automated checks run by `make check`.
-
-template <typename... Targs>
-void DUMMY_CODE(Targs &&... /* unused */) {}
-
 using namespace std;
 
 size_t TCPConnection::remaining_outbound_capacity() const {
@@ -24,7 +16,42 @@ size_t TCPConnection::time_since_last_segment_received() const {
     return active() ? _time_since_last_segment_received : 0;
 }
 
-void TCPConnection::segment_received(const TCPSegment &seg) { DUMMY_CODE(seg); }
+void TCPConnection::segment_received(const TCPSegment &seg) {
+    const TCPHeader &seg_header = seg.header();
+
+    if (seg_header.rst)
+        _error_occured();
+
+    if (!active())
+        return;
+
+    _time_since_last_segment_received = 0;
+
+    const bool check_keep_alive_seg = _receiver.ackno().has_value() && seg.length_in_sequence_space() == 0 &&
+                                      seg.header().seqno == _receiver.ackno().value() - 1;
+    if (check_keep_alive_seg)
+        _sender.send_empty_segment();
+    else {
+        _receiver.segment_received(seg);
+
+        if (seg_header.ack) {
+            const WrappingInt32 ackno = seg_header.ackno;
+            const uint16_t window_size = seg_header.win;
+            _sender.ack_received(ackno, window_size);
+        } else
+            _sender.fill_window();
+
+        if (seg.length_in_sequence_space()) {
+            if (_sender.segments_out().empty())
+                _sender.send_empty_segment();
+        }
+
+        if (_receiver.stream_out().eof() && !(_sender.stream_in().eof() && _sent_fin))
+            _linger_after_streams_finish = false;
+    }
+
+    _send_segments();
+}
 
 bool TCPConnection::active() const {
     if (_error)
