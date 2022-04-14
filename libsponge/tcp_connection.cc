@@ -82,17 +82,17 @@ void TCPConnection::tick(const size_t ms_since_last_tick) {
     if (!active())
         return;
 
+    _time_since_last_segment_received += ms_since_last_tick;
     _sender.tick(ms_since_last_tick);
+    _send_segments();
 
     if (_sender.consecutive_retransmissions() > _cfg.MAX_RETX_ATTEMPTS)
         _error_occured();
 
-    _send_segments();
+    if (!_prerequisite_test())
+        return;
 
-    _time_since_last_segment_received += ms_since_last_tick;
-
-    const size_t max_linger_timeout = 10 * _cfg.rt_timeout;
-    if (_prerequisite_test() && _time_since_last_segment_received >= max_linger_timeout)
+    if (_time_since_last_segment_received >= 10 * _cfg.rt_timeout)
         _linger_after_streams_finish = false;
 }
 
