@@ -51,7 +51,23 @@ size_t TCPConnection::write(const string &data) {
 }
 
 //! \param[in] ms_since_last_tick number of milliseconds since the last call to this method
-void TCPConnection::tick(const size_t ms_since_last_tick) { DUMMY_CODE(ms_since_last_tick); }
+void TCPConnection::tick(const size_t ms_since_last_tick) {
+    if (!active())
+        return;
+
+    _sender.tick(ms_since_last_tick);
+
+    if (_sender.consecutive_retransmissions() > _cfg.MAX_RETX_ATTEMPTS)
+        _error_occured();
+
+    _send_segments();
+
+    _time_since_last_segment_received += ms_since_last_tick;
+
+    const size_t max_linger_timeout = 10 * _cfg.rt_timeout;
+    if (_prerequisite_test() && _time_since_last_segment_received >= max_linger_timeout)
+        _linger_after_streams_finish = false;
+}
 
 void TCPConnection::end_input_stream() {
     if (!active())
