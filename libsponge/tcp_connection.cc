@@ -51,3 +51,49 @@ TCPConnection::~TCPConnection() {
         std::cerr << "Exception destructing TCP FSM: " << e.what() << std::endl;
     }
 }
+
+void TCPConnection::_send_segments() {
+    queue<TCPSegment> &wait_segments = _sender.segments_out();
+
+    while (!wait_segments.empty()) {
+        TCPSegment seg = wait_segments.front();
+        TCPHeader &seg_header = seg.header();
+
+        _sent_fin |= seg_header.fin;
+
+        const optional<WrappingInt32> recv_ackno = _receiver.ackno();
+        if (recv_ackno.has_value()) {
+            seg_header.ack = true;
+            seg_header.ackno = recv_ackno.value();
+        }
+
+        const size_t recv_window_size = _receiver.window_size();
+        const size_t max_window_size = static_cast<size_t>(numeric_limits<uint16_t>().max());
+        seg_header.win = min(recv_window_size, max_window_size);
+
+        seg_header.rst = _error;
+
+        _segments_out.push(seg);
+
+        wait_segments.pop();
+    }
+}
+
+void TCPConnection::_error_occured() {
+    _error = true;
+    _receiver.stream_out().set_error();
+    _sender.stream_in().set_error();
+}
+
+bool TCPConnection::_prerequisite_test() const {
+    if (!_receiver.stream_out().eof())
+        return false;
+
+    if (!(_sender.stream_in().eof() && _sent_fin))
+        return false;
+
+    if (_sender.bytes_in_flight())
+        return false;
+
+    return true;
+}

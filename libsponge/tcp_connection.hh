@@ -24,6 +24,11 @@ class TCPConnection {
     bool _error = false;
     bool _sent_fin = false;
     size_t _time_since_last_segment_received = 0;
+
+    void _send_segments();
+    void _error_occured();
+
+    bool _prerequisite_test() const;
     
   public:
     //! \name "Input" interface for the writer
