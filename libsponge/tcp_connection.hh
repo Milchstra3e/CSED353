@@ -29,7 +29,7 @@ class TCPConnection {
     void _error_occured();
 
     bool _prerequisite_test() const;
-    
+
   public:
     //! \name "Input" interface for the writer
     //!@{
