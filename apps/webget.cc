@@ -7,7 +7,7 @@
 using namespace std;
 
 void get_URL(const string &host, const string &path) {
-    CS144TCPSocket sock;
+    FullStackSocket sock;
 
     sock.connect(Address(host, "http"));
 
