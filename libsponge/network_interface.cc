@@ -77,6 +77,7 @@ void NetworkInterface::tick(const size_t ms_since_last_tick) {
 
     auto cache_iter = _cache.begin();
     while (cache_iter != _cache.end()) {
+        cache_iter->second.second += ms_since_last_tick;
         if (cache_iter->second.second >= CACHE_TIMEOUT)
             cache_iter = _cache.erase(cache_iter);
         else
@@ -96,10 +97,10 @@ ARPMessage NetworkInterface::_gen_ARPMessage(const uint16_t opcode, const uint32
     return msg;
 }
 
-EthernetFrame NetworkInterface::_gen_frame(const uint32_t target_ip) {
+EthernetFrame NetworkInterface::_gen_frame(const uint32_t target_ip, const uint16_t type) {
     EthernetFrame frame;
     EthernetHeader &frame_header = frame.header();
-    frame_header.type = EthernetHeader::TYPE_ARP;
+    frame_header.type = type;
     frame_header.src = _ethernet_address;
     frame_header.dst = (_cache.find(target_ip) != _cache.end()) ? _cache[target_ip].first : ETHERNET_BROADCAST;
 
@@ -107,33 +108,32 @@ EthernetFrame NetworkInterface::_gen_frame(const uint32_t target_ip) {
 }
 
 EthernetFrame NetworkInterface::_gen_frame(const uint32_t target_ip, const InternetDatagram dgram) {
-    EthernetFrame frame = _gen_frame(target_ip);
+    EthernetFrame frame = _gen_frame(target_ip, EthernetHeader::TYPE_IPv4);
     frame.payload() = dgram.serialize();
     return frame;
 }
 
 EthernetFrame NetworkInterface::_gen_frame(const uint32_t target_ip, const ARPMessage msg) {
-    EthernetFrame frame = _gen_frame(target_ip);
+    EthernetFrame frame = _gen_frame(target_ip, EthernetHeader::TYPE_ARP);
     frame.payload() = msg.serialize();
     return frame;
 }
 
 void NetworkInterface::_update() {
     auto ARP_iter = _wait_ARP.begin();
-    while(ARP_iter != _wait_ARP.end()) {
-        if(_cache.find(ARP_iter->first) != _cache.end())
+    while (ARP_iter != _wait_ARP.end()) {
+        if (_cache.find(ARP_iter->first) != _cache.end())
             ARP_iter = _wait_ARP.erase(ARP_iter);
         else
             ARP_iter++;
     }
 
     auto dgram_iter = _wait_dgram.begin();
-    while(dgram_iter != _wait_dgram.end()) {
-        if(_cache.find(dgram_iter->first) != _cache.end()) {
+    while (dgram_iter != _wait_dgram.end()) {
+        if (_cache.find(dgram_iter->first) != _cache.end()) {
             _frames_out.push(_gen_frame(dgram_iter->first, dgram_iter->second));
             dgram_iter = _wait_dgram.erase(dgram_iter);
-        }
-        else
+        } else
             dgram_iter++;
     }
 }

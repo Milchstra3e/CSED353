@@ -51,7 +51,7 @@ class NetworkInterface {
     std::list<std::pair<uint32_t, size_t>> _wait_ARP{};
 
     ARPMessage _gen_ARPMessage(const uint16_t opcode, const uint32_t target_ip);
-    EthernetFrame _gen_frame(const uint32_t target_ip);
+    EthernetFrame _gen_frame(const uint32_t target_ip, const uint16_t type);
     EthernetFrame _gen_frame(const uint32_t target_ip, const InternetDatagram dgram);
     EthernetFrame _gen_frame(const uint32_t target_ip, const ARPMessage msg);
 
