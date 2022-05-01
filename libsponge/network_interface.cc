@@ -48,7 +48,21 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
 }
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
-void NetworkInterface::tick(const size_t ms_since_last_tick) { DUMMY_CODE(ms_since_last_tick); }
+void NetworkInterface::tick(const size_t ms_since_last_tick) {
+    for(auto &e : _wait_ARP) {
+        e.second += ms_since_last_tick;
+        if(e.second >= ARP_TIMEOUT)
+            _frames_out.push(_gen_frame(e.first, _gen_ARPMessage(ARPMessage::OPCODE_REQUEST, e.first)));
+    }
+
+    map<uint32_t, std::pair<EthernetAddress, size_t>>::iterator cache_iter = _cache.begin();
+    while (cache_iter != _cache.end()) {
+        if (cache_iter->second.second >= CACHE_TIMEOUT)
+            cache_iter = _cache.erase(cache_iter);
+        else
+            cache_iter++;
+    }
+}
 
 
 ARPMessage NetworkInterface::_gen_ARPMessage(const uint16_t opcode, const uint32_t target_ip) {

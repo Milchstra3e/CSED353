@@ -43,6 +43,9 @@ class NetworkInterface {
     //! outbound queue of Ethernet frames that the NetworkInterface wants sent
     std::queue<EthernetFrame> _frames_out{};
 
+    static constexpr size_t ARP_TIMEOUT = 5000;
+    static constexpr size_t CACHE_TIMEOUT = 20000;
+
     std::map<uint32_t, std::pair<EthernetAddress, size_t>> _cache{};
     std::list<std::pair<uint32_t, InternetDatagram>> _wait_dgram{};
     std::list<std::pair<uint32_t, size_t>> _wait_ARP{};
