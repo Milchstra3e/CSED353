@@ -28,6 +28,16 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
     if(_cache.find(next_hop_ip) != _cache.end())
         _frames_out.push(_gen_frame(next_hop_ip, dgram));
     else {
+        _wait_dgram.push_back(make_pair(next_hop_ip, dgram));
+        
+        bool dup_check = false;
+        for (auto &e : _wait_ARP)
+            dup_check |= (e.first == next_hop_ip);
+
+        if(!dup_check) {
+            _wait_ARP.push_back(make_pair(next_hop_ip, 0));
+            _frames_out.push(_gen_frame(next_hop_ip, _gen_ARPMessage(ARPMessage::OPCODE_REQUEST, next_hop_ip)));
+        }
     }
 }
 
