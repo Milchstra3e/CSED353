@@ -22,16 +22,16 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
     // convert IP address of next hop to raw 32-bit representation (used in ARP header)
     const uint32_t next_hop_ip = next_hop.ipv4_numeric();
 
-    if(_cache.find(next_hop_ip) != _cache.end())
+    if (_cache.find(next_hop_ip) != _cache.end())
         _frames_out.push(_gen_frame(next_hop_ip, dgram));
     else {
         _wait_dgram.push_back(make_pair(next_hop_ip, dgram));
-        
+
         bool dup_check = false;
         for (auto &e : _wait_ARP)
             dup_check |= (e.first == next_hop_ip);
 
-        if(!dup_check) {
+        if (!dup_check) {
             _wait_ARP.push_back(make_pair(next_hop_ip, 0));
             _frames_out.push(_gen_frame(next_hop_ip, _gen_ARPMessage(ARPMessage::OPCODE_REQUEST, next_hop_ip)));
         }
@@ -49,8 +49,7 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
 
         if (dgram.parse(frame.payload()) == ParseResult::NoError)
             return dgram;
-    }
-    else {
+    } else {
         ARPMessage msg;
 
         if (msg.parse(frame.payload()) == ParseResult::NoError && msg.target_ip_address == _ip_address.ipv4_numeric()) {
@@ -60,7 +59,7 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
             _cache[sender_ip] = make_pair(sender_mac, 0);
             _update();
 
-            if(msg.opcode == ARPMessage::OPCODE_REQUEST)
+            if (msg.opcode == ARPMessage::OPCODE_REQUEST)
                 _frames_out.push(_gen_frame(sender_ip, _gen_ARPMessage(ARPMessage::OPCODE_REPLY, sender_ip)));
         }
     }
@@ -70,9 +69,9 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
 void NetworkInterface::tick(const size_t ms_since_last_tick) {
-    for(auto &e : _wait_ARP) {
+    for (auto &e : _wait_ARP) {
         e.second += ms_since_last_tick;
-        if(e.second >= ARP_TIMEOUT)
+        if (e.second >= ARP_TIMEOUT)
             _frames_out.push(_gen_frame(e.first, _gen_ARPMessage(ARPMessage::OPCODE_REQUEST, e.first)));
     }
 
@@ -85,14 +84,14 @@ void NetworkInterface::tick(const size_t ms_since_last_tick) {
     }
 }
 
-
 ARPMessage NetworkInterface::_gen_ARPMessage(const uint16_t opcode, const uint32_t target_ip) {
     ARPMessage msg;
     msg.opcode = opcode;
     msg.sender_ip_address = _ip_address.ipv4_numeric();
     msg.target_ip_address = target_ip;
-    msg.sender_ethernet_address =  _ethernet_address;
-    msg.target_ethernet_address = (_cache.find(target_ip) != _cache.end()) ? _cache[target_ip].first : EthernetAddress();
+    msg.sender_ethernet_address = _ethernet_address;
+    msg.target_ethernet_address =
+        (_cache.find(target_ip) != _cache.end()) ? _cache[target_ip].first : EthernetAddress();
 
     return msg;
 }
@@ -119,6 +118,4 @@ EthernetFrame NetworkInterface::_gen_frame(const uint32_t target_ip, const ARPMe
     return frame;
 }
 
-void _update() {
-    return;
-}
+void NetworkInterface::_update() { return; }

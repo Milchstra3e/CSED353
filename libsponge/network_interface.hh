@@ -6,10 +6,10 @@
 #include "tcp_over_ip.hh"
 #include "tun.hh"
 
+#include <list>
+#include <map>
 #include <optional>
 #include <queue>
-#include <map>
-#include <list>
 
 //! \brief A "network interface" that connects IP (the internet layer, or network layer)
 //! with Ethernet (the network access layer, or link layer).
@@ -56,7 +56,7 @@ class NetworkInterface {
     EthernetFrame _gen_frame(const uint32_t target_ip, const ARPMessage msg);
 
     void _update();
-    
+
   public:
     //! \brief Construct a network interface with given Ethernet (network-access-layer) and IP (internet-layer) addresses
     NetworkInterface(const EthernetAddress &ethernet_address, const Address &ip_address);
