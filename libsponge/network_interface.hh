@@ -47,7 +47,10 @@ class NetworkInterface {
     std::list<std::pair<uint32_t, InternetDatagram>> _wait_dgram{};
     std::list<std::pair<uint32_t, size_t>> _wait_ARP{};
 
-    EthernetFrame _gen_ARPMessage(const uint16_t opcode, const uint32_t target_ip);
+    ARPMessage _gen_ARPMessage(const uint16_t opcode, const uint32_t target_ip);
+    EthernetFrame _gen_frame(const uint32_t target_ip);
+    EthernetFrame _gen_frame(const uint32_t target_ip, const InternetDatagram dgram);
+    EthernetFrame _gen_frame(const uint32_t target_ip, const ARPMessage msg);
 
   public:
     //! \brief Construct a network interface with given Ethernet (network-access-layer) and IP (internet-layer) addresses

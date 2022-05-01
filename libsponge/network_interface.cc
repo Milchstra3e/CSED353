@@ -5,14 +5,6 @@
 
 #include <iostream>
 
-// Dummy implementation of a network interface
-// Translates from {IP datagram, next hop address} to link-layer frame, and from link-layer frame to IP datagram
-
-// For Lab 5, please replace with a real implementation that passes the
-// automated checks run by `make check_lab5`.
-
-// You will need to add private members to the class declaration in `network_interface.hh`
-
 template <typename... Targs>
 void DUMMY_CODE(Targs &&... /* unused */) {}
 
@@ -33,7 +25,10 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
     // convert IP address of next hop to raw 32-bit representation (used in ARP header)
     const uint32_t next_hop_ip = next_hop.ipv4_numeric();
 
-    DUMMY_CODE(dgram, next_hop, next_hop_ip);
+    if(_cache.find(next_hop_ip) != _cache.end())
+        _frames_out.push(_gen_frame(next_hop_ip, dgram));
+    else {
+    }
 }
 
 //! \param[in] frame the incoming Ethernet frame
@@ -46,7 +41,7 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
 void NetworkInterface::tick(const size_t ms_since_last_tick) { DUMMY_CODE(ms_since_last_tick); }
 
 
-EthernetFrame NetworkInterface::_gen_ARPMessage(const uint16_t opcode, const uint32_t target_ip) {
+ARPMessage NetworkInterface::_gen_ARPMessage(const uint16_t opcode, const uint32_t target_ip) {
     ARPMessage msg;
     msg.opcode = opcode;
     msg.sender_ip_address = _ip_address.ipv4_numeric();
@@ -54,13 +49,27 @@ EthernetFrame NetworkInterface::_gen_ARPMessage(const uint16_t opcode, const uin
     msg.sender_ethernet_address =  _ethernet_address;
     msg.target_ethernet_address = (_cache.find(target_ip) != _cache.end()) ? _cache[target_ip].first : EthernetAddress();
 
+    return msg;
+}
+
+EthernetFrame NetworkInterface::_gen_frame(const uint32_t target_ip) {
     EthernetFrame frame;
     EthernetHeader &frame_header = frame.header();
     frame_header.type = EthernetHeader::TYPE_ARP;
     frame_header.src = _ethernet_address;
     frame_header.dst = (_cache.find(target_ip) != _cache.end()) ? _cache[target_ip].first : ETHERNET_BROADCAST;
 
-    frame.payload() = msg.serialize();
+    return frame;
+}
 
+EthernetFrame NetworkInterface::_gen_frame(const uint32_t target_ip, const InternetDatagram dgram) {
+    EthernetFrame frame = _gen_frame(target_ip);
+    frame.payload() = dgram.serialize();
+    return frame;
+}
+
+EthernetFrame NetworkInterface::_gen_frame(const uint32_t target_ip, const ARPMessage msg) {
+    EthernetFrame frame = _gen_frame(target_ip);
+    frame.payload() = msg.serialize();
     return frame;
 }
