@@ -75,7 +75,7 @@ void NetworkInterface::tick(const size_t ms_since_last_tick) {
             _frames_out.push(_gen_frame(e.first, _gen_ARPMessage(ARPMessage::OPCODE_REQUEST, e.first)));
     }
 
-    map<uint32_t, std::pair<EthernetAddress, size_t>>::iterator cache_iter = _cache.begin();
+    auto cache_iter = _cache.begin();
     while (cache_iter != _cache.end()) {
         if (cache_iter->second.second >= CACHE_TIMEOUT)
             cache_iter = _cache.erase(cache_iter);
@@ -118,4 +118,22 @@ EthernetFrame NetworkInterface::_gen_frame(const uint32_t target_ip, const ARPMe
     return frame;
 }
 
-void NetworkInterface::_update() { return; }
+void NetworkInterface::_update() {
+    auto ARP_iter = _wait_ARP.begin();
+    while(ARP_iter != _wait_ARP.end()) {
+        if(_cache.find(ARP_iter->first) != _cache.end())
+            ARP_iter = _wait_ARP.erase(ARP_iter);
+        else
+            ARP_iter++;
+    }
+
+    auto dgram_iter = _wait_dgram.begin();
+    while(dgram_iter != _wait_dgram.end()) {
+        if(_cache.find(dgram_iter->first) != _cache.end()) {
+            _frames_out.push(_gen_frame(dgram_iter->first, dgram_iter->second));
+            dgram_iter = _wait_dgram.erase(dgram_iter);
+        }
+        else
+            dgram_iter++;
+    }
+}
