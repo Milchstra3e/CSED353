@@ -44,7 +44,7 @@ class NetworkInterface {
     std::queue<EthernetFrame> _frames_out{};
 
     static constexpr size_t ARP_TIMEOUT = 5000;
-    static constexpr size_t CACHE_TIMEOUT = 20000;
+    static constexpr size_t CACHE_TIMEOUT = 30000;
 
     std::map<uint32_t, std::pair<EthernetAddress, size_t>> _cache{};
     std::list<std::pair<uint32_t, InternetDatagram>> _wait_dgram{};
@@ -55,6 +55,8 @@ class NetworkInterface {
     EthernetFrame _gen_frame(const uint32_t target_ip, const InternetDatagram dgram);
     EthernetFrame _gen_frame(const uint32_t target_ip, const ARPMessage msg);
 
+    void _update();
+    
   public:
     //! \brief Construct a network interface with given Ethernet (network-access-layer) and IP (internet-layer) addresses
     NetworkInterface(const EthernetAddress &ethernet_address, const Address &ip_address);

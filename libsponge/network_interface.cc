@@ -5,9 +5,6 @@
 
 #include <iostream>
 
-template <typename... Targs>
-void DUMMY_CODE(Targs &&... /* unused */) {}
-
 using namespace std;
 
 //! \param[in] ethernet_address Ethernet (what ARP calls "hardware") address of the interface
@@ -43,8 +40,32 @@ void NetworkInterface::send_datagram(const InternetDatagram &dgram, const Addres
 
 //! \param[in] frame the incoming Ethernet frame
 optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &frame) {
-    DUMMY_CODE(frame);
-    return {};
+    const EthernetHeader &frame_header = frame.header();
+    if (!(frame_header.dst == _ethernet_address || frame_header.dst == ETHERNET_BROADCAST))
+        return nullopt;
+
+    if (frame_header.type == EthernetHeader::TYPE_IPv4) {
+        InternetDatagram dgram;
+
+        if (dgram.parse(frame.payload()) == ParseResult::NoError)
+            return dgram;
+    }
+    else {
+        ARPMessage msg;
+
+        if (msg.parse(frame.payload()) == ParseResult::NoError && msg.target_ip_address == _ip_address.ipv4_numeric()) {
+            const EthernetAddress sender_mac = msg.sender_ethernet_address;
+            const uint32_t sender_ip = msg.sender_ip_address;
+
+            _cache[sender_ip] = make_pair(sender_mac, 0);
+            _update();
+
+            if(msg.opcode == ARPMessage::OPCODE_REQUEST)
+                _frames_out.push(_gen_frame(sender_ip, _gen_ARPMessage(ARPMessage::OPCODE_REPLY, sender_ip)));
+        }
+    }
+
+    return nullopt;
 }
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
@@ -96,4 +117,8 @@ EthernetFrame NetworkInterface::_gen_frame(const uint32_t target_ip, const ARPMe
     EthernetFrame frame = _gen_frame(target_ip);
     frame.payload() = msg.serialize();
     return frame;
+}
+
+void _update() {
+    return;
 }
