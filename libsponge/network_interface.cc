@@ -44,3 +44,23 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
 void NetworkInterface::tick(const size_t ms_since_last_tick) { DUMMY_CODE(ms_since_last_tick); }
+
+
+EthernetFrame NetworkInterface::_gen_ARPMessage(const uint16_t opcode, const uint32_t target_ip) {
+    ARPMessage msg;
+    msg.opcode = opcode;
+    msg.sender_ip_address = _ip_address.ipv4_numeric();
+    msg.target_ip_address = target_ip;
+    msg.sender_ethernet_address =  _ethernet_address;
+    msg.target_ethernet_address = (_cache.find(target_ip) != _cache.end()) ? _cache[target_ip].first : EthernetAddress();
+
+    EthernetFrame frame;
+    EthernetHeader &frame_header = frame.header();
+    frame_header.type = EthernetHeader::TYPE_ARP;
+    frame_header.src = _ethernet_address;
+    frame_header.dst = (_cache.find(target_ip) != _cache.end()) ? _cache[target_ip].first : ETHERNET_BROADCAST;
+
+    frame.payload() = msg.serialize();
+
+    return frame;
+}
