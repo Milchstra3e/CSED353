@@ -69,12 +69,14 @@ optional<InternetDatagram> NetworkInterface::recv_frame(const EthernetFrame &fra
 
 //! \param[in] ms_since_last_tick the number of milliseconds since the last call to this method
 void NetworkInterface::tick(const size_t ms_since_last_tick) {
+    // Checking ARP message whether to be over the resend timeout.
     for (auto &e : _wait_ARP) {
         e.second += ms_since_last_tick;
         if (e.second >= ARP_TIMEOUT)
             _frames_out.push(_gen_frame(e.first, _gen_ARPMessage(ARPMessage::OPCODE_REQUEST, e.first)));
     }
 
+    // Checking Cache wheter to be over the lifetime timeout.
     auto cache_iter = _cache.begin();
     while (cache_iter != _cache.end()) {
         cache_iter->second.second += ms_since_last_tick;
@@ -120,6 +122,7 @@ EthernetFrame NetworkInterface::_gen_frame(const uint32_t target_ip, const ARPMe
 }
 
 void NetworkInterface::_update() {
+    // removing ARP Message which to arrive.
     auto ARP_iter = _wait_ARP.begin();
     while (ARP_iter != _wait_ARP.end()) {
         if (_cache.find(ARP_iter->first) != _cache.end())
@@ -128,6 +131,7 @@ void NetworkInterface::_update() {
             ARP_iter++;
     }
 
+    // removing IP Datagram which target MAC corresponding target IP is found.
     auto dgram_iter = _wait_dgram.begin();
     while (dgram_iter != _wait_dgram.end()) {
         if (_cache.find(dgram_iter->first) != _cache.end()) {
