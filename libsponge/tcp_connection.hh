@@ -21,7 +21,6 @@ class TCPConnection {
     //! in case the remote TCPConnection doesn't know we've received its whole stream?
     bool _linger_after_streams_finish{true};
 
-<<<<<<< HEAD
     bool _error = false;
     bool _sent_fin = false;
     size_t _time_since_last_segment_received = 0;
@@ -31,8 +30,6 @@ class TCPConnection {
 
     bool _prerequisite_test() const;
 
-=======
->>>>>>> template/lab5-startercode
   public:
     //! \name "Input" interface for the writer
     //!@{
