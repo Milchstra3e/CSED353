@@ -22,12 +22,12 @@ void Router::add_route(const uint32_t route_prefix,
 void Router::route_one_datagram(InternetDatagram &dgram) {
     auto &dgram_header = dgram.header();
 
-    if(dgram_header.ttl <= 1)
+    if (dgram_header.ttl <= 1)
         return;
 
     dgram_header.ttl--;
 
-    for(const auto &e : _route_table) {
+    for (const auto &e : _route_table) {
         const uint8_t prefix_length = e.first;
         const uint32_t route_prefix = e.second.route_prefix;
         const optional<Address> next_hop = e.second.next_hop;
@@ -36,8 +36,9 @@ void Router::route_one_datagram(InternetDatagram &dgram) {
         uint32_t route_prefix_applied = prefix_length ? route_prefix >> (32 - prefix_length) : 0;
         uint32_t dgram_dst_applied = prefix_length ? dgram_header.dst >> (32 - prefix_length) : 0;
 
-        if(route_prefix_applied == dgram_dst_applied){
-            const Address target = next_hop.has_value() ? next_hop.value() : Address::from_ipv4_numeric(dgram_header.dst);
+        if (route_prefix_applied == dgram_dst_applied) {
+            const Address target =
+                next_hop.has_value() ? next_hop.value() : Address::from_ipv4_numeric(dgram_header.dst);
             interface(interface_num).send_datagram(dgram, target);
             break;
         }

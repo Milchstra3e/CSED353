@@ -55,7 +55,7 @@ class Router {
         size_t interface_num = 0;
     };
 
-    std::multimap<uint8_t, elem, std::greater<uint8_t> > _route_table{};
+    std::multimap<uint8_t, elem, std::greater<uint8_t>> _route_table{};
 
   public:
     //! Add an interface to the router
