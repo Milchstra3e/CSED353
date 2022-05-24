@@ -37,13 +37,19 @@ If you used any part of best-submission codes, specify all the best-submission n
 
 + Did your implementations successfully start and end a conversation with each other (with each implementation acting as “client” or as “server”)?
 
+    Yes, we did.
+    ![image](./figure3.PNG)
 + Did you successfully transfer a one-megabyte file between your two implementations, with contents identical upon receipt?
 
+    I sended one-megabyte file successfully, she received 1MB file successfully and both server and client had same contents.
+    ![image](./figure4.PNG)
+    ![image](./figure5.PNG)
 + Please describe what code changes, if any, were necessary to pass these steps, either by you or your partner.
 
     There has been no change in my code since assn6.
 
 ## 3. Creative portion
+There is no creative portion.
 
 ## 4. Other remarks
 I can't find any bugs and remarkable points in this assignment.
