@@ -11,7 +11,7 @@ My assignment partner's name: Soomin Choi
 
 My assignment partner's POVIS ID: choisium
 
-My assignment partner's ID (numeric): [your partner's student id here]
+My assignment partner's ID (numeric): 20160169
 
 This assignment took me about 1 hours to do (including the time on studying, designing, and writing the code).
 
